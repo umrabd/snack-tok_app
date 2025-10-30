@@ -1,1 +1,50 @@
 @import "tailwindcss";
+
+
+:root{
+  --bg: #f7fafc;         /* background */
+  --card: #ffffff;       /* card / surface */
+  --text: #0f172a;       /* main text */
+  --muted: #6b7280;      /* muted text */
+  --primary: #2563eb;    /* primary accent */
+  --ring: rgba(37,99,235,0.35);
+  --radius: 0.75rem;
+  --input-bg: #f3f4f6;
+}
+
+/* Dark theme overrides (class-based) */
+.dark {
+  --bg: #0b1220;
+  --card: #35455f;
+  --text: #e6eef8;
+  --muted: #9aa6b2;
+  --primary: #60a5fa;
+  --ring: rgba(96,165,250,0.18);
+  --input-bg: #0b1220;
+}
+
+/* make html/body follow variables so tailwind utility text/bg remain consistent */
+html, body, #root {
+  background-color: var(--bg);
+  color: var(--text);
+}
+
+/* small helper classes that map to variables (used by pages/components) */
+.bg-card { background-color: var(--card); }
+.text-text { color: var(--text); }
+.text-muted { color: var(--muted); }
+.bg-primary { background-color: var(--primary); }
+.text-primary { color: var(--primary); }
+.border-ring { box-shadow: 0 0 0 4px var(--ring); }
+
+/* Smooth transitions when theme flips */
+.theme-transition * {
+  transition-property: background-color, color, border-color, box-shadow;
+  transition-duration: 180ms;
+  transition-timing-function: ease-in-out;
+}
+
+/* small form tweaks */
+.input {
+  @apply w-full rounded-[var(--radius)] px-4 py-2 border border-transparent bg-[var(--input-bg)] text-[var(--text)] placeholder:opacity-60;
+}
