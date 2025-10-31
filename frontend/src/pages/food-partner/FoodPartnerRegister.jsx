@@ -22,12 +22,21 @@ const FoodPartnerRegister = () => {
                 <label className="text-sm text-muted mb-1 block">Contact email</label>
                 <input type="email" className="input" placeholder="owner@example.com" />
               </div>
-
+<div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
+              <div>
+                <label className="text-sm text-muted mb-1 block">Contact Name</label>
+                <input className="input" placeholder="John Doe" />
+              </div>
               <div>
                 <label className="text-sm text-muted mb-1 block">Phone (optional)</label>
                 <input className="input" placeholder="+1 555 555 555" />
               </div>
+</div>
 
+<div>
+                <label className="text-sm text-muted mb-1 block">Location</label>
+                <input className="input" placeholder="123 Snack St, Food City" />
+              </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className="text-sm text-muted mb-1 block">Password</label>
