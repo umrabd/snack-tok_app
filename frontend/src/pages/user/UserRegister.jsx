@@ -16,6 +16,7 @@ const UserRegister = () => {
 
   const [passwordMatch, setPasswordMatch] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const fullname = watch("fullname");
   const email = watch("email");
@@ -31,7 +32,8 @@ const UserRegister = () => {
     }
   }, [password, confirmPassword]);
 
-  const onSubmit = async(data) => {
+  const onSubmit = async(data, e) => {
+    setIsLoading(true);
     // Handle form submission, e.g., send data to backend
     try{
 
@@ -41,7 +43,10 @@ const UserRegister = () => {
             password: password
           });
           toast.success("User registered successfully!");
+
+ e.target.reset();
       console.log("User registered successfully:", response.data);
+      
     } catch (error) {
       if(error.response){
         setErrorMessage(error.response.data.message);
@@ -50,13 +55,16 @@ const UserRegister = () => {
       }else {
         setErrorMessage("An error occurred. Please try again.");
         toast.error("An error occurred. Please try again.");
-      }
+      } 
+    }
+    finally {
+      setIsLoading(false);
     }
   };
 
   // 🧩 disable button if any field empty or password mismatch
   const isButtonDisabled =
-    !fullname || !email || !password || !confirmPassword || passwordMatch === false;
+    isLoading || !fullname || !email || !password || !confirmPassword || passwordMatch === false;
 
   return (
     <Layout>
@@ -151,7 +159,7 @@ const UserRegister = () => {
               {/* Submit Button */}
               <Button
                 type="submit"
-                btnText="Create account"
+                 btnText={isLoading ? "Creating account..." : "Create account"}
                 disabled={isButtonDisabled}
                 className={`w-full py-2 rounded-md font-semibold text-white transition ${
                   isButtonDisabled
