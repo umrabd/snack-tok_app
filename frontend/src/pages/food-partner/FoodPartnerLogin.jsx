@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import Button from '../../components/Button';
 import axios from 'axios';
@@ -10,6 +10,7 @@ const FoodPartnerLogin = () => {
 
   const [isLoading, setIsLoading] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState("");
+  const navigate = useNavigate();
 
   const {
     register,
@@ -31,7 +32,9 @@ const FoodPartnerLogin = () => {
         password: password,
       })
       toast.success("Login successful!");
+      localStorage.setItem('isAuthenticated', 'true');
       e.target.reset();
+      navigate('/create-food');
     console.log("Login successful:", response.data);
     }catch(error){
       if (error.response) {

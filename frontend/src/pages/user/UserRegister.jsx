@@ -5,8 +5,12 @@ import Button from "../../components/Button";
 import { useForm } from "react-hook-form";
 import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
+import {useNavigate} from 'react-router-dom';
 
 const UserRegister = () => {
+
+const navigate = useNavigate();
+
   const {
     register,
     handleSubmit,
@@ -38,14 +42,24 @@ const UserRegister = () => {
     try{
 
       const response = await axios.post('http://localhost:3000/api/auth/user/register', {
-            fullname: fullname,
-            email: email,
-            password: password
-          });
-          toast.success("User registered successfully!");
+        fullname: fullname,
+        email: email,
+        password: password
+      }, {
+        withCredentials: true
+      });
 
+      // prefer server-returned value
+      const returnedName = response?.data?.user?.fullname || fullname;
+      localStorage.setItem('fullname', returnedName);
+      toast.success("User registered successfully!");
+
+      localStorage.setItem('isAuthenticated', 'true');
+      localStorage.setItem('user', JSON.stringify(response.data.user));
  e.target.reset();
       console.log("User registered successfully:", response.data);
+
+      navigate('/');
       
     } catch (error) {
       if(error.response){

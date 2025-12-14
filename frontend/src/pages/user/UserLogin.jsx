@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Layout from "../../components/Layout";
 import Button from "../../components/Button";
 import toast, { Toaster } from "react-hot-toast";
@@ -8,6 +8,7 @@ import { useForm } from "react-hook-form";
 
 const UserLogin = () => {
   const [isLoading, setIsLoading] = React.useState(false);
+  const navigate = useNavigate();
 
   const {
     register,
@@ -27,10 +28,14 @@ const UserLogin = () => {
       const response = await axios.post("http://localhost:3000/api/auth/user/login", {
         email: data.email,
         password: data.password,
+      },{
+        withCredentials: true
       });
 
       toast.success("Login successful!");
+      localStorage.setItem('isAuthenticated', 'true');
       reset(); // ✅ clear all fields after successful login
+      navigate('/');
       console.log("Login successful:", response.data);
     } catch (error) {
       if (error.response) {

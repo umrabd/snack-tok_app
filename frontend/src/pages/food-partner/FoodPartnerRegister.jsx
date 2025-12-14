@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Layout from "../../components/Layout";
 import Button from "../../components/Button";
 import { useForm } from "react-hook-form";
@@ -15,6 +15,7 @@ const FoodPartnerRegister = () => {
     formState: { errors },
   } = useForm();
 
+  const navigate = useNavigate();
   const [passwordMatch, setPasswordMatch] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -66,8 +67,9 @@ const FoodPartnerRegister = () => {
 
       toast.success("Food partner registered successfully!");
       console.log("Registration successful:", response.data);
-
+      localStorage.setItem('isAuthenticated', 'true');
       e.target.reset(); // ✅ Clear all fields
+      navigate('/create-food');
     } catch (error) {
       console.log(error)
       if (error.response) {
