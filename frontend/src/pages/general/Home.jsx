@@ -1,38 +1,16 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 
 // Mock Data for the Feed (Hardcoded content - used as initial state)
-const mockVideos = [
-  {
-    id: 1,
-    videoUrl: 'https://ik.imagekit.io/johnran12/b0b228d6-3a27-400d-b539-7030f25119dc_bYOdRNhG8',
-    storeName: 'The Spice House',
-    description: 'The viral chicken tikka masala recipe that everyone is talking about! Order ingredients now for 1-day delivery.',
-    userName: '@ChefUmer',
-  },
-  {
-    id: 2,
-    videoUrl: 'https://ik.imagekit.io/johnran12/b0b228d6-3a27-400d-b539-7030f25119dc_bYOdRNhG8',
-    storeName: 'Sweet Tooth Bakery',
-    description: 'These molten chocolate lava cakes are the ultimate comfort food. Click the button to get 50% off your first order!',
-    userName: '@BakerAlex',
-  },
-  {
-    id: 3,
-    videoUrl: 'https://ik.imagekit.io/johnran12/b0b228d6-3a27-400d-b539-7030f25119dc_bYOdRNhG8',
-    storeName: 'Quick Bites Diner',
-    description: 'The easiest way to make gourmet burgers at home using our pre-made kits. Super fast and absolutely delicious!',
-    userName: '@FoodieJane',
-  },
-];
+
 
 const Home = () => {
   const navigate = useNavigate();
   // Using the videoRefs Map to store references to the actual <video> elements
   const videoRefs = useRef(new Map());
   // The state to hold the videos (initialized with mock data)
-  const [videos, setVideos] = useState(mockVideos);
+  const [videos, setVideos] = useState([]);
 
   // Function to set the video ref dynamically
   const setVideoRef = useCallback((id) => (element) => {
@@ -43,10 +21,7 @@ const Home = () => {
     }
   }, []);
 
-  // Handler for the "Visit Store" button
-  const handleVisitStore = (storeName) => {
-    console.log(`Navigating to store: ${storeName}`);
-  };
+ 
 
   // Hardcoded Logout handler
   const handleLogout = () => {
@@ -60,7 +35,7 @@ const Home = () => {
     // Adding an AbortController for cleanup is a good practice with Axios
     const controller = new AbortController();
     
-    axios.get('http://localhost:3000/api/food')
+    axios.get('http://localhost:3000/api/food', {withCredentials: true})
       .then(response => {
         // Assuming your API response is reliable and has foodItems array
         if (response.data.foodItems) {
@@ -72,7 +47,9 @@ const Home = () => {
             // Request was cancelled, ignore
             return;
         }
+      
         console.error("Error fetching food items:", error);
+       
       });
     
     return () => {
@@ -124,15 +101,15 @@ const Home = () => {
       {videos.map((video) => (
         // 2. Individual video slide: Full screen, relative position, and snaps to the top
         <div 
-          key={video.id} 
+          key={video._id} 
           className="h-screen w-screen relative snap-start flex justify-center items-center bg-black"
         >
           
           {/* Video Element: Now using the setVideoRef function to link the DOM element to videoRefs Map */}
           <video 
-            ref={setVideoRef(video.id)} // <--- CRITICAL: Sets the ref for the observer
+            ref={setVideoRef(video._id)} // <--- CRITICAL: Sets the ref for the observer
             className="w-full h-full object-cover" 
-            src={video.videoUrl} 
+            src={video.video} 
             loop 
             muted 
             // Removed autoPlay here. IntersectionObserver handles it.
@@ -147,7 +124,7 @@ const Home = () => {
             
             {/* User Name */}
             <h2 className="text-lg font-bold mb-1">
-              {video.userName}
+              {video.name}
             </h2>
             
             {/* Store Name */}
@@ -161,12 +138,12 @@ const Home = () => {
             </p>
 
             {/* "Visit Store" Button */}
-            <button 
-                onClick={() => handleVisitStore(video.storeName)} 
-                className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition duration-150 w-36 self-start"
+            <Link 
+               to = { "/food-partner/" +   video.foodPartner}
+                className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition duration-150 w-30 flex items-center justify-center  self-start"
             >
                 Visit Store
-            </button>
+            </Link>
             
           </div>
         </div>
