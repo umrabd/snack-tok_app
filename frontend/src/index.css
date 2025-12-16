@@ -10,11 +10,13 @@
   --ring: rgba(37,99,235,0.35);
   --radius: 0.75rem;
   --input-bg: #f3f4f6;
+  --tile: #e2e8f0;      /* secondary card/surface */
 }
 
 /* Dark theme overrides (class-based) */
 .dark {
   --bg: #0b1220;
+  --tile: #405371;
   --card: #35455f;
   --text: #e6eef8;
   --muted: #9aa6b2;

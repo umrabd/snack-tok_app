@@ -44,11 +44,13 @@ const Home = () => {
       })
       .catch(error => {
         if (axios.isCancel(error)) {
-            // Request was cancelled, ignore
-            return;
+          // Request was cancelled, ignore
+          return;
         }
-      
+        
         console.error("Error fetching food items:", error);
+        navigate("/user/login")
+        
        
       });
     
