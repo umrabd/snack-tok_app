@@ -27,10 +27,12 @@ const FoodPartnerLogin = () => {
   const onSubmit = async (data, e) => {
     setIsLoading(true);
     try{
-      const response = await axios.post("http://localhost:3000/api/auth/foodpartner/login", {
+      const response = await axios.post("http://localhost:3000/api/auth/foodpartner/login",{
         email: email,
         password: password,
-      })
+      }, {withCredentials: true});
+
+   
       toast.success("Login successful!");
       localStorage.setItem('isAuthenticated', 'true');
       e.target.reset();
