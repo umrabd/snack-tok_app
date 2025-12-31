@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
+import { FaPlay } from 'react-icons/fa';
 
 // Mock Data for the Feed (Hardcoded content - used as initial state)
 
@@ -11,6 +12,7 @@ const Home = () => {
   const videoRefs = useRef(new Map());
   // The state to hold the videos (initialized with mock data)
   const [videos, setVideos] = useState([]);
+  const [pausedVideos, setPausedVideos] = useState({});
 
   // Function to set the video ref dynamically
   const setVideoRef = useCallback((id) => (element) => {
@@ -21,7 +23,21 @@ const Home = () => {
     }
   }, []);
 
- 
+  // const handleVideoClick = (id) => {
+  //   const video = videoRefs.current.get(id);
+  //   if (video) {
+  //     if (video.paused) {
+  //       video.play();
+  //       setPausedVideos((prev) => ({ ...prev, [id]: false }));
+  //     } else {
+  //       video.pause();
+  //       setPausedVideos((prev) => ({ ...prev, [id]: true }));
+  //     }
+  //   }
+  // };
+
+
+  
 
   // Hardcoded Logout handler
   const handleLogout = () => {
@@ -94,6 +110,59 @@ const Home = () => {
     
   }, [videos]); // Re-run this effect whenever the 'videos' array changes (e.g., after API fetch)
 
+  const speedTimerRef = useRef(null);
+const isSpeeding = useRef(false);
+
+const handlePointerDown = (e, id) => {
+  const rect = e.currentTarget.getBoundingClientRect();
+  const x = e.clientX - rect.left; // Get click position relative to video
+  const width = rect.width;
+
+  // Check if click is on the Right Side (more than 50% width)
+  if (x > width / 2) {
+    isSpeeding.current = false; // Reset
+
+    // Start timer: If held for 500ms, increase speed
+    speedTimerRef.current = setTimeout(() => {
+      const video = videoRefs.current.get(id);
+      if (video) {
+        video.playbackRate = 2.0; // Double speed
+        isSpeeding.current = true;
+        console.log("2x Speed Active");
+      }
+    }, 500); // 0.5 seconds is standard for speed-up
+  }
+};
+
+const handlePointerUp = (id) => {
+  // 1. Stop the timer
+  if (speedTimerRef.current) clearTimeout(speedTimerRef.current);
+
+  // 2. Reset video speed to normal
+  const video = videoRefs.current.get(id);
+  if (video && video.playbackRate !== 1.0) {
+    video.playbackRate = 1.0;
+  }
+};
+
+const handleVideoClick = (id) => {
+  // If we were just speeding up, don't toggle play/pause
+  if (isSpeeding.current) {
+    isSpeeding.current = false;
+    return;
+  }
+
+  // Normal Play/Pause Logic
+  const video = videoRefs.current.get(id);
+  if (video.paused) {
+    video.play();
+    setPausedVideos(prev => ({ ...prev, [id]: false }));
+  } else {
+    video.pause();
+    setPausedVideos(prev => ({ ...prev, [id]: true }));
+  }
+};
+
 
   return (
     // 1. Main container: Full viewport height, vertical scrolling, and mandatory snapping
@@ -104,21 +173,38 @@ const Home = () => {
         // 2. Individual video slide: Full screen, relative position, and snaps to the top
         <div 
           key={video._id} 
+
+          onPointerDown={(e) => handlePointerDown(e, video._id)}
+  onPointerUp={() => handlePointerUp(video._id)}
+  onPointerLeave={() => handlePointerUp(video._id)} // Reset if finger slides off
+  
+  onClick={() => handleVideoClick(video._id)}
+
           className="h-screen w-screen relative snap-start flex justify-center items-center bg-black"
         >
           
           {/* Video Element: Now using the setVideoRef function to link the DOM element to videoRefs Map */}
           <video 
-            ref={setVideoRef(video._id)} // <--- CRITICAL: Sets the ref for the observer
+
+            ref={setVideoRef(video._id)} 
+            data-id={video._id}// <--- CRITICAL: Sets the ref for the observer
             className="w-full h-full object-cover" 
             src={video.video} 
+           playsInline
             loop 
+
             muted 
-            // Removed autoPlay here. IntersectionObserver handles it.
-            playsInline
+            
           >
             Your browser does not support the video tag.
           </video>
+          {pausedVideos[video._id] && (
+            <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                <FaPlay className="text-white text-6xl opacity-50" />
+            </div>
+          )}
+
+          
           
           {/* 3. Overlay Content Container */}
           <div className="absolute bottom-0 left-0 w-full p-4 z-10 text-white 
