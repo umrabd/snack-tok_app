@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import { FaPlay } from 'react-icons/fa';
+import { FaPlay, FaRegBookmark, FaBookmark } from 'react-icons/fa';
+import {IoHeart} from 'react-icons/io5';
+import { IoHeartOutline } from "react-icons/io5";
 
 // Mock Data for the Feed (Hardcoded content - used as initial state)
 
@@ -203,7 +205,17 @@ const handleVideoClick = (id) => {
                 <FaPlay className="text-white text-6xl opacity-50" />
             </div>
           )}
+<div className='absolute bottom-20 right-4 z-20 space-y-4 flex flex-col items-center'>
 
+          <div >
+            <IoHeartOutline className="text-white text-3xl" />
+          </div>
+          <div >
+            <FaRegBookmark className="text-white text-2xl" />
+          </div>
+</div>
+
+            
           
           
           {/* 3. Overlay Content Container */}
