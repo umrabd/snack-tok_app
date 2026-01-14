@@ -1,260 +1,189 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import { FaPlay, FaRegBookmark, FaBookmark } from 'react-icons/fa';
-import {IoHeart} from 'react-icons/io5';
-import { IoHeartOutline } from "react-icons/io5";
-
-// Mock Data for the Feed (Hardcoded content - used as initial state)
-
-
+import { FaPlay, FaRegBookmark, FaBookmark, FaRegComment } from 'react-icons/fa';
+import { IoHeartOutline, IoHeart } from "react-icons/io5";
+import BottomNav from '../../components/BottomNav';
 const Home = () => {
   const navigate = useNavigate();
-  // Using the videoRefs Map to store references to the actual <video> elements
   const videoRefs = useRef(new Map());
-  // The state to hold the videos (initialized with mock data)
   const [videos, setVideos] = useState([]);
   const [pausedVideos, setPausedVideos] = useState({});
 
-  // Function to set the video ref dynamically
   const setVideoRef = useCallback((id) => (element) => {
-    if (element) {
-      videoRefs.current.set(id, element);
-    } else {
-      videoRefs.current.delete(id);
-    }
+    if (element) videoRefs.current.set(id, element);
+    else videoRefs.current.delete(id);
   }, []);
 
-  // const handleVideoClick = (id) => {
-  //   const video = videoRefs.current.get(id);
-  //   if (video) {
-  //     if (video.paused) {
-  //       video.play();
-  //       setPausedVideos((prev) => ({ ...prev, [id]: false }));
-  //     } else {
-  //       video.pause();
-  //       setPausedVideos((prev) => ({ ...prev, [id]: true }));
-  //     }
-  //   }
-  // };
-
-
-  
-
-  // Hardcoded Logout handler
-  const handleLogout = () => {
-    localStorage.removeItem('isAuthenticated');
-    localStorage.removeItem('fullname');
-    navigate('/user/login');
-  };
-
-  // 1. Fetch data on mount
+  // Fetch Logic (Kept exactly as yours)
   useEffect(() => {
-    // Adding an AbortController for cleanup is a good practice with Axios
     const controller = new AbortController();
-    
-    axios.get('http://localhost:3000/api/food', {withCredentials: true})
+    axios.get('http://localhost:3000/api/food', { withCredentials: true })
       .then(response => {
-        // Assuming your API response is reliable and has foodItems array
-        if (response.data.foodItems) {
-            setVideos(response.data.foodItems);
-        }
+        console.log('GET /api/food response:', response.data); // <-- log payload
+        if (response.data.foodItems) setVideos(response.data.foodItems);
       })
       .catch(error => {
-        if (axios.isCancel(error)) {
-          // Request was cancelled, ignore
-          return;
-        }
-        
-        console.error("Error fetching food items:", error);
-        navigate("/user/login")
-        
-       
+        console.error('Fetch error:', error);
+        if (!axios.isCancel(error)) navigate('/user/login');
       });
-    
-    return () => {
-        // Cleanup function for Axios: abort the request if the component unmounts
-        controller.abort();
-    };
-  }, []); // Run only once on mount
+    return () => controller.abort();
+  }, [navigate]);
 
-  // 2. Intersection Observer Logic (The main fix)
+  // Observer Logic (improved: guard play/pause, wait for metadata, ignore AbortError)
   useEffect(() => {
-    // Create the observer
     const observer = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
         const video = entry.target;
-        
-        if (!(video instanceof HTMLVideoElement)) return; 
+        if (!(video instanceof HTMLVideoElement)) return;
 
-        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-          // Play the current video if it's visible (50% or more)
-          video.play().catch(error => {
-            console.warn("Autoplay prevented:", error.message);
-          });
-        } else {
-          // Pause when the video scrolls out of the threshold
+        const isVisible = entry.isIntersecting && entry.intersectionRatio >= 0.5;
+        const hasSrc = !!(video.currentSrc || video.src || video.querySelector('source')?.src);
+
+        if (!hasSrc) {
+          // nothing to do if no source
           video.pause();
+          setPausedVideos(prev => ({ ...prev, [video.dataset.id]: true }));
+          return;
+        }
+
+        if (isVisible) {
+          // only attempt play if currently paused
+          if (video.paused) {
+            const p = video.play();
+            if (p && typeof p.catch === 'function') {
+              p.catch(err => {
+                // ignore AbortError caused by an immediate pause; log others
+                if (err && err.name === 'AbortError') return;
+                console.warn('Video play() failed:', err);
+              });
+            }
+            setPausedVideos(prev => ({ ...prev, [video.dataset.id]: false }));
+          }
+        } else {
+          // only pause if it's currently playing
+          if (!video.paused) {
+            try { video.pause(); } catch (_) {}
+            setPausedVideos(prev => ({ ...prev, [video.dataset.id]: true }));
+          }
         }
       });
     }, { threshold: 0.5 });
 
-    // Start observing ALL video elements currently registered in videoRefs
-    // We wait until videos are loaded and rendered, then observe them.
-    videoRefs.current.forEach(video => {
-      observer.observe(video);
+    // observe only videos that have a src and are in the DOM
+    videoRefs.current.forEach((v) => {
+      if (!(v instanceof HTMLVideoElement)) return;
+      const src = v.currentSrc || v.src || v.querySelector('source')?.src;
+      if (src) {
+        if (v.readyState >= 2) observer.observe(v);
+        else {
+          const onLoaded = () => {
+            observer.observe(v);
+            v.removeEventListener('loadedmetadata', onLoaded);
+          };
+          v.addEventListener('loadedmetadata', onLoaded);
+          // ensure browser starts loading metadata
+          try { v.load(); } catch (_) {}
+        }
+      } else {
+        // no src yet: log for debugging
+        // console.warn('Video element has no src, skipping observe', v.dataset.id);
+      }
     });
 
-    // Cleanup: Unobserve all elements and disconnect the observer when component unmounts
-    return () => {
-        observer.disconnect();
-    };
-    
-  }, [videos]); // Re-run this effect whenever the 'videos' array changes (e.g., after API fetch)
+    return () => observer.disconnect();
+  }, [videos]);
 
-  const speedTimerRef = useRef(null);
-const isSpeeding = useRef(false);
-
-const handlePointerDown = (e, id) => {
-  const rect = e.currentTarget.getBoundingClientRect();
-  const x = e.clientX - rect.left; // Get click position relative to video
-  const width = rect.width;
-
-  // Check if click is on the Right Side (more than 50% width)
-  if (x > width / 2) {
-    isSpeeding.current = false; // Reset
-
-    // Start timer: If held for 500ms, increase speed
-    speedTimerRef.current = setTimeout(() => {
-      const video = videoRefs.current.get(id);
-      if (video) {
-        video.playbackRate = 2.0; // Double speed
-        isSpeeding.current = true;
-        console.log("2x Speed Active");
-      }
-    }, 500); // 0.5 seconds is standard for speed-up
-  }
-};
-
-const handlePointerUp = (id) => {
-  // 1. Stop the timer
-  if (speedTimerRef.current) clearTimeout(speedTimerRef.current);
-
-  // 2. Reset video speed to normal
-  const video = videoRefs.current.get(id);
-  if (video && video.playbackRate !== 1.0) {
-    video.playbackRate = 1.0;
-  }
-};
-
-const handleVideoClick = (id) => {
-  // If we were just speeding up, don't toggle play/pause
-  if (isSpeeding.current) {
-    isSpeeding.current = false;
-    return;
-  }
-
-  // Normal Play/Pause Logic
-  const video = videoRefs.current.get(id);
-  if (video.paused) {
-    video.play();
-    setPausedVideos(prev => ({ ...prev, [id]: false }));
-  } else {
-    video.pause();
-    setPausedVideos(prev => ({ ...prev, [id]: true }));
-  }
-};
-
+  const handleVideoClick = (id) => {
+    const video = videoRefs.current.get(id);
+    if (video.paused) {
+      video.play();
+      setPausedVideos(prev => ({ ...prev, [id]: false }));
+    } else {
+      video.pause();
+      setPausedVideos(prev => ({ ...prev, [id]: true }));
+    }
+  };
 
   return (
-    // 1. Main container: Full viewport height, vertical scrolling, and mandatory snapping
-    <div className="h-screen overflow-y-scroll snap-y snap-mandatory">
-      
-      {/* Map over the state-managed videos */}
-      {videos.map((video) => (
-        // 2. Individual video slide: Full screen, relative position, and snaps to the top
-        <div 
-          key={video._id} 
-
-          onPointerDown={(e) => handlePointerDown(e, video._id)}
-  onPointerUp={() => handlePointerUp(video._id)}
-  onPointerLeave={() => handlePointerUp(video._id)} // Reset if finger slides off
-  
-  onClick={() => handleVideoClick(video._id)}
-
-          className="h-screen w-screen relative snap-start flex justify-center items-center bg-black"
-        >
-          
-          {/* Video Element: Now using the setVideoRef function to link the DOM element to videoRefs Map */}
-          <video 
-
-            ref={setVideoRef(video._id)} 
-            data-id={video._id}// <--- CRITICAL: Sets the ref for the observer
-            className="w-full h-full object-cover" 
-            src={video.video} 
-           playsInline
-            loop 
-
-            muted 
-            
-          >
-            Your browser does not support the video tag.
-          </video>
-          {pausedVideos[video._id] && (
-            <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-                <FaPlay className="text-white text-6xl opacity-50" />
-            </div>
-          )}
-<div className='absolute bottom-20 right-4 z-20 space-y-4 flex flex-col items-center'>
-
-          <div >
-            <IoHeartOutline className="text-white text-3xl" />
-          </div>
-          <div >
-            <FaRegBookmark className="text-white text-2xl" />
-          </div>
-</div>
-
-            
-          
-          
-          {/* 3. Overlay Content Container */}
-          <div className="absolute bottom-0 left-0 w-full p-4 z-10 text-white 
-                       bg-gradient-to-t from-black/80 to-transparent flex flex-col justify-end">
-            
-            {/* User Name */}
-            <h2 className="text-lg font-bold mb-1">
-              {video.name}
-            </h2>
-            
-            {/* Store Name */}
-            <p className="text-sm font-semibold text-gray-200">
-              {video.storeName}
-            </p>
-            
-            {/* Truncated Description (Max 2 lines) */}
-            <p className="text-white mt-1 mb-3 text-sm line-clamp-2">
-              {video.description}
-            </p>
-
-            {/* "Visit Store" Button */}
-            <Link 
-               to = { "/food-partner/" +   video.foodPartner}
-                className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition duration-150 w-30 flex items-center justify-center  self-start"
+    <div className="h-screen w-full bg-black overflow-y-scroll snap-y snap-mandatory no-scrollbar">
+      {videos.map((video) => {
+        const src = video.videoUrl || video.video || video.url || '';
+        return (
+          <div key={video._id} className="h-screen w-screen relative snap-start flex justify-center items-center bg-black">
+            <video
+              ref={setVideoRef(video._id)}
+              data-id={video._id}
+              className="w-full h-full object-cover"
+              playsInline
+              loop
+              muted
+              preload="metadata"
+              onError={(e) => {
+                console.error('Video element error, src=', src, e);
+              }}
+              onLoadedMetadata={() => {
+                // helpful for debugging: when metadata loads, log src and readyState
+                const el = videoRefs.current.get(video._id);
+                if (el) console.log('loaded metadata for', video._id, 'src=', el.currentSrc || el.src, 'readyState=', el.readyState);
+              }}
+              // add controls only for debugging; remove later if you want autoplay-only
+              controls
             >
-                Visit Store
-            </Link>
-            
+              {src ? (
+                <source src={src} />
+              ) : null}
+              Your browser does not support the video tag.
+            </video>
+
+            {/* show small overlay if src is missing or invalid */}
+            {!src && (
+              <div className="absolute inset-0 flex items-center justify-center text-white bg-black/60">
+                No video source
+              </div>
+            )}
+
+            {pausedVideos[video._id] && (
+              <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                <FaPlay className="text-white/50 text-6xl" />
+              </div>
+            )}
+
+            {/* Right Action Sidebar */}
+            <div className='absolute bottom-32 right-4 z-20 flex flex-col items-center space-y-6'>
+              <div className="flex flex-col items-center">
+                <IoHeartOutline className="text-white text-4xl drop-shadow-lg" />
+                <span className="text-white text-xs mt-1">Like</span>
+              </div>
+              <div className="flex flex-col items-center">
+                <FaRegBookmark  className="text-white text-3xl drop-shadow-lg" />
+                <span className="text-white text-xs mt-1">Save</span>
+              </div>
+              <div className="flex flex-col items-center">
+                <FaRegComment className="text-white text-3xl drop-shadow-lg" />
+                <span className="text-white text-xs mt-1">12</span>
+              </div>
+            </div>
+
+            {/* Bottom Info Overlay */}
+            <div className="absolute bottom-0 left-0 w-full p-6 z-10 text-white bg-gradient-to-t from-black/90 to-transparent">
+              <div className="mb-16"> {/* Spacer for BottomNav */}
+                <h2 className="text-xl font-bold">@{video.name}</h2>
+                <p className="text-sm text-gray-300 mt-2 line-clamp-2 max-w-[280px]">
+                  {video.description}
+                </p>
+                <Link 
+                  to={"/food-partner/" + video.foodPartner}
+                  className="mt-4 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-full inline-block transition"
+                >
+                  Visit Store
+                </Link>
+              </div>
+            </div>
           </div>
-        </div>
-      ))}
-      
-      {/* Optional: Add a placeholder/loading state if videos array is empty */}
-      {videos.length === 0 && (
-          <div className="h-screen w-screen flex items-center justify-center text-white">
-              Loading delicious snacks...
-          </div>
-      )}
+        );
+      })}
+      <BottomNav />
     </div>
   );
 };

@@ -8,6 +8,7 @@ import Home from '../pages/general/Home';
 import ProtectedRoute from '../auth/ProtectedRoute';
 import CreateFood from '../pages/general/CreateFood';
 import Profile from '../pages/food-partner/Profile'
+import Saved from '../pages/general/Saved';
 
 const AppRoutes = () => {
   return (
@@ -19,6 +20,14 @@ const AppRoutes = () => {
         <Route path="/food-partner/register" element={<FoodPartnerRegister />} />
         <Route path="/food-partner/login" element={<FoodPartnerLogin />} />
         <Route path="/food-partner/:id" element={<Profile />} />
+        <Route
+          path="/saved"
+          element={
+            <ProtectedRoute>
+              <Saved />
+            </ProtectedRoute>
+          }
+        />
 
         <Route
           path="/"
